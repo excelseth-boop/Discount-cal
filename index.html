@@ -361,6 +361,20 @@
 
   document.getElementById('buy2Toggle').addEventListener('change', function() {
     document.getElementById('buy2PctRow').style.display = this.checked ? 'block' : 'none';
+
+    var itemsInput = document.getElementById('itemsPerUnit');
+    var val = parseInt(itemsInput.value, 10);
+    if (isNaN(val) || val < 1) val = 1;
+
+    if (this.checked) {
+      val = val * 2;
+    } else {
+      val = Math.round(val / 2);
+    }
+    if (val < 1) val = 1;
+    if (val > 99) val = 99;
+
+    itemsInput.value = val;
   });
 
   // Start with one discount row and one coupon row pre-added
