@@ -250,6 +250,14 @@
       <input type="number" id="buy2Pct" inputmode="decimal" placeholder="e.g. 50" step="0.01" min="0" max="100" value="50">
       <span style="color:#888; font-size:20px; min-width:14px;">%</span>
     </div>
+    <div class="coupon-condition" style="margin-top:8px;">
+      <input type="checkbox" id="dualPriceToggle">
+      <label for="dualPriceToggle">Two items have different prices (discount applies to cheaper one)</label>
+    </div>
+    <div id="secondPriceRow" style="display:none; margin-top:4px;">
+      <label for="secondPrice">Price of 2nd item (USD)</label>
+      <input type="number" id="secondPrice" inputmode="decimal" placeholder="e.g. 8" step="0.01">
+    </div>
   </div>
 </div>
 
@@ -263,6 +271,26 @@
   <div class="section-title">Flat Coupon Discounts (USD)</div>
   <div id="couponList"></div>
   <button class="coupon-add-btn" id="addCouponBtn">+ Add Coupon</button>
+</div>
+
+<div class="card">
+  <div class="toggle-row">
+    <span>
+      <span class="label-text">Add VAT</span>
+      <span class="hint">Applied after all discounts &amp; coupons</span>
+    </span>
+    <label class="switch">
+      <input type="checkbox" id="vatToggle">
+      <span class="slider"></span>
+    </label>
+  </div>
+  <div id="vatRateRow" style="display:none; margin-top:8px;">
+    <label for="vatRate">VAT Rate</label>
+    <div class="discount-row" style="margin-bottom:0;">
+      <input type="number" id="vatRate" inputmode="decimal" placeholder="e.g. 6.25" step="0.01" min="0" max="100" value="6.25">
+      <span style="color:#888; font-size:20px; min-width:14px;">%</span>
+    </div>
+  </div>
 </div>
 
 <div class="btn-row">
@@ -377,6 +405,14 @@
     itemsInput.value = val;
   });
 
+  document.getElementById('dualPriceToggle').addEventListener('change', function() {
+    document.getElementById('secondPriceRow').style.display = this.checked ? 'block' : 'none';
+  });
+
+  document.getElementById('vatToggle').addEventListener('change', function() {
+    document.getElementById('vatRateRow').style.display = this.checked ? 'block' : 'none';
+  });
+
   // Start with one discount row and one coupon row pre-added
   addDiscountRow();
   addCouponRow();
@@ -389,6 +425,13 @@
     document.getElementById('buy2Toggle').checked = false;
     document.getElementById('buy2Pct').value = '50';
     document.getElementById('buy2PctRow').style.display = 'none';
+    document.getElementById('dualPriceToggle').checked = false;
+    document.getElementById('secondPrice').value = '';
+    document.getElementById('secondPriceRow').style.display = 'none';
+
+    document.getElementById('vatToggle').checked = false;
+    document.getElementById('vatRate').value = '6.25';
+    document.getElementById('vatRateRow').style.display = 'none';
 
     discountList.innerHTML = '';
     couponList.innerHTML = '';
@@ -417,14 +460,31 @@
     if (isNaN(buy2Pct) || buy2Pct < 0) buy2Pct = 0;
     if (buy2Pct > 100) buy2Pct = 100;
 
+    var dualPrice = document.getElementById('dualPriceToggle').checked;
+    var secondPrice = parseFloat(document.getElementById('secondPrice').value);
+
     var current = price;
     var lines = [];
     lines.push({ label: 'Original Price', value: '$' + price.toFixed(2) });
 
+    var buy2TotalBefore = price;
+
     if (buy2) {
-      var secondItem = price * (1 - buy2Pct / 100);
-      current = price + secondItem;
-      lines.push({ label: '2nd item at ' + buy2Pct + '% off (+$' + secondItem.toFixed(2) + ')', value: '$' + current.toFixed(2) });
+      if (dualPrice && !isNaN(secondPrice) && secondPrice > 0) {
+        var fullPriceItem = Math.max(price, secondPrice);
+        var cheaperItem = Math.min(price, secondPrice);
+        var discountedItem = cheaperItem * (1 - buy2Pct / 100);
+        current = fullPriceItem + discountedItem;
+        buy2TotalBefore = fullPriceItem + cheaperItem;
+        lines.push({ label: 'Full price item', value: '$' + fullPriceItem.toFixed(2) });
+        lines.push({ label: 'Cheaper item at ' + buy2Pct + '% off', value: '$' + discountedItem.toFixed(2) });
+        lines.push({ label: 'Combined (2 items)', value: '$' + current.toFixed(2) });
+      } else {
+        var secondItem = price * (1 - buy2Pct / 100);
+        current = price + secondItem;
+        buy2TotalBefore = price * 2;
+        lines.push({ label: '2nd item at ' + buy2Pct + '% off (+$' + secondItem.toFixed(2) + ')', value: '$' + current.toFixed(2) });
+      }
     }
 
     var discInputs = discountList.querySelectorAll('input');
@@ -455,11 +515,24 @@
       }
     }
 
-    var originalForPercent = buy2 ? (price + price * (1 - buy2Pct / 100)) : price;
+    var originalForPercent = buy2TotalBefore;
     var saved = originalForPercent - current;
 
+    var preTaxPrice = current;
+    var vatOn = document.getElementById('vatToggle').checked;
+    var vatRate = parseFloat(document.getElementById('vatRate').value);
+    if (isNaN(vatRate) || vatRate < 0) vatRate = 0;
+    var vatAmount = preTaxPrice * (vatRate / 100);
+
+    if (vatOn) {
+      lines.push({ label: 'Price before VAT', value: '$' + preTaxPrice.toFixed(2) });
+      lines.push({ label: 'VAT @' + vatRate + '%', value: '$' + vatAmount.toFixed(2) });
+      current = preTaxPrice + vatAmount;
+      lines.push({ label: 'Final price (incl. VAT)', value: '$' + current.toFixed(2) });
+    }
+
     document.getElementById('finalPrice').textContent = '$' + current.toFixed(2);
-    document.getElementById('totalSaved').textContent = 'You saved $' + saved.toFixed(2) + ' (' + ((saved / originalForPercent) * 100).toFixed(1) + '%)';
+    document.getElementById('totalSaved').textContent = 'You saved $' + saved.toFixed(2) + ' (' + ((saved / originalForPercent) * 100).toFixed(1) + '%)' + (vatOn ? ' \u2022 incl. VAT' : ' \u2022 excl. VAT');
 
     var itemsPerUnit = parseInt(document.getElementById('itemsPerUnit').value, 10);
     if (isNaN(itemsPerUnit) || itemsPerUnit < 1) itemsPerUnit = 1;
