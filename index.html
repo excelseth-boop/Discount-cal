@@ -24,26 +24,26 @@
     font-size: 33px;
     font-weight: 700;
     text-align: center;
-    margin: 14px 0 4px;
+    margin: 8px 0 2px;
   }
   p.sub {
     text-align: center;
     color: #9b9ba1;
     font-size: 20px;
-    margin: 0 0 16px;
+    margin: 0 0 8px;
   }
   .card {
     background: #1e1e22;
     border-radius: 14px;
-    padding: 12px;
-    margin-bottom: 12px;
+    padding: 10px 12px;
+    margin-bottom: 6px;
     border: 1px solid #2a2a2e;
   }
   label {
     display: block;
     font-size: 20px;
     color: #b0b0b6;
-    margin-bottom: 6px;
+    margin-bottom: 4px;
   }
   input[type="number"] {
     width: 100%;
@@ -61,7 +61,7 @@
     display: flex;
     gap: 6px;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 4px;
   }
   .discount-row input { flex: 1; min-width: 0; }
   .remove-btn {
@@ -84,7 +84,7 @@
     color: #0a84ff;
     font-size: 22px;
     font-weight: 600;
-    margin-top: 2px;
+    margin-top: 0;
   }
   .calc-btn {
     width: 100%;
@@ -95,12 +95,29 @@
     color: #fff;
     font-size: 25px;
     font-weight: 700;
-    margin-top: 4px;
+    margin-top: 2px;
   }
+  .btn-row {
+    display: flex;
+    gap: 8px;
+  }
+  .btn-row .calc-btn { flex: 2; }
+  .clear-btn {
+    flex: 1;
+    padding: 14px;
+    border-radius: 14px;
+    border: 1px solid #3d3d44;
+    background: #1e1e22;
+    color: #ff6b6b;
+    font-size: 22px;
+    font-weight: 700;
+    margin-top: 2px;
+  }
+  .clear-btn:active { background: #2a2020; }
   .calc-btn:active { background: #0066cc; }
   .result {
     text-align: center;
-    margin-top: 14px;
+    margin-top: 8px;
     padding: 16px 12px;
     border-radius: 16px;
     background: linear-gradient(135deg,#0a3a1e,#0a2a16);
@@ -184,7 +201,7 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    margin: -2px 0 8px 2px;
+    margin: -2px 0 4px 2px;
   }
   .coupon-condition input[type="checkbox"] {
     width: 18px;
@@ -219,7 +236,7 @@
       <span class="slider"></span>
     </label>
   </div>
-  <div id="buy2PctRow" style="display:none; margin-top:12px;">
+  <div id="buy2PctRow" style="display:none; margin-top:6px;">
     <label for="buy2Pct">2nd item discount</label>
     <div class="discount-row" style="margin-bottom:0;">
       <input type="number" id="buy2Pct" inputmode="decimal" placeholder="e.g. 50" step="0.01" min="0" max="100" value="50">
@@ -240,7 +257,10 @@
   <button class="coupon-add-btn" id="addCouponBtn">+ Add Coupon</button>
 </div>
 
-<button class="calc-btn" id="calcBtn">Calculate Final Price</button>
+<div class="btn-row">
+  <button class="clear-btn" id="clearBtn" type="button">Clear</button>
+  <button class="calc-btn" id="calcBtn">Calculate Final Price</button>
+</div>
 
 <div class="result" id="result">
   <div class="saved">Final Price</div>
@@ -337,6 +357,25 @@
   // Start with one discount row and one coupon row pre-added
   addDiscountRow();
   addCouponRow();
+
+  document.getElementById('clearBtn').addEventListener('click', function() {
+    document.getElementById('price').value = '';
+    document.getElementById('price').style.borderColor = '#34343a';
+
+    document.getElementById('buy2Toggle').checked = false;
+    document.getElementById('buy2Pct').value = '50';
+    document.getElementById('buy2PctRow').style.display = 'none';
+
+    discountList.innerHTML = '';
+    couponList.innerHTML = '';
+    addDiscountRow();
+    addCouponRow();
+
+    var resultEl = document.getElementById('result');
+    resultEl.classList.remove('show');
+
+    document.getElementById('price').focus();
+  });
 
   document.getElementById('calcBtn').addEventListener('click', function() {
     var priceInput = document.getElementById('price');
