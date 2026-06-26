@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Discount Calculator</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="mobile-web-app-capable" content="yes">
+<style>
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body {
+    margin: 0;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+    background: linear-gradient(135deg,#1c1c1e,#0a0a0c);
+    color: #fff;
+    min-height: 100vh;
+    padding: env(safe-area-inset-top) 12px calc(env(safe-area-inset-bottom) + 20px) 12px;
+  }
+  h1 {
+    font-size: 33px;
+    font-weight: 700;
+    text-align: center;
+    margin: 14px 0 4px;
+  }
+  p.sub {
+    text-align: center;
+    color: #9b9ba1;
+    font-size: 20px;
+    margin: 0 0 16px;
+  }
+  .card {
+    background: #1e1e22;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+    border: 1px solid #2a2a2e;
+  }
+  label {
+    display: block;
+    font-size: 20px;
+    color: #b0b0b6;
+    margin-bottom: 6px;
+  }
+  input[type="number"] {
+    width: 100%;
+    font-size: 24px; /* prevents iOS zoom */
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #34343a;
+    background: #2a2a2e;
+    color: #fff;
+    outline: none;
+    min-width: 0;
+  }
+  input[type="number"]:focus { border-color: #0a84ff; }
+  .discount-row {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+    margin-bottom: 8px;
+  }
+  .discount-row input { flex: 1; min-width: 0; }
+  .remove-btn {
+    background: #3a2020;
+    color: #ff6b6b;
+    border: none;
+    width: 42px;
+    height: 42px;
+    flex-shrink: 0;
+    border-radius: 10px;
+    font-size: 27px;
+    line-height: 1;
+  }
+  .add-btn, .coupon-add-btn {
+    width: 100%;
+    padding: 10px;
+    border-radius: 10px;
+    border: 1px dashed #3d3d44;
+    background: transparent;
+    color: #0a84ff;
+    font-size: 22px;
+    font-weight: 600;
+    margin-top: 2px;
+  }
+  .calc-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    background: #0a84ff;
+    color: #fff;
+    font-size: 25px;
+    font-weight: 700;
+    margin-top: 4px;
+  }
+  .calc-btn:active { background: #0066cc; }
+  .result {
+    text-align: center;
+    margin-top: 14px;
+    padding: 16px 12px;
+    border-radius: 16px;
+    background: linear-gradient(135deg,#0a3a1e,#0a2a16);
+    border: 1px solid #1e5c34;
+    display: none;
+  }
+  .result.show { display: block; animation: fadein 0.25s ease; }
+  @keyframes fadein { from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+  .result .final {
+    font-size: 54px;
+    font-weight: 800;
+    color: #4ee08a;
+    margin: 4px 0 6px;
+  }
+  .result .saved {
+    font-size: 21px;
+    color: #9fd9b6;
+  }
+  .breakdown {
+    margin-top: 10px;
+    text-align: left;
+    font-size: 20px;
+    color: #b8e6c8;
+    border-top: 1px solid #1e5c34;
+    padding-top: 8px;
+  }
+  .breakdown div { padding: 3px 0; display: flex; justify-content: space-between; gap: 8px; }
+  .section-title {
+    font-size: 21px;
+    font-weight: 700;
+    color: #d0d0d6;
+    margin-bottom: 8px;
+  }
+  .discount-row span { font-size: 20px !important; }
+</style>
+</head>
+<body>
+
+<h1>Discount Calculator</h1>
+<p class="sub">Multi-stage % discounts + flat coupon</p>
+
+<div class="card">
+  <label for="price">Product Price (USD)</label>
+  <input type="number" id="price" inputmode="decimal" placeholder="e.g. 80" step="0.01">
+</div>
+
+<div class="card">
+  <div class="section-title">Percentage Discounts</div>
+  <div id="discountList"></div>
+  <button class="add-btn" id="addDiscountBtn">+ Add Discount</button>
+</div>
+
+<div class="card">
+  <div class="section-title">Flat Coupon Discounts (USD)</div>
+  <div id="couponList"></div>
+  <button class="coupon-add-btn" id="addCouponBtn">+ Add Coupon</button>
+</div>
+
+<button class="calc-btn" id="calcBtn">Calculate Final Price</button>
+
+<div class="result" id="result">
+  <div class="saved">Final Price</div>
+  <div class="final" id="finalPrice">$0.00</div>
+  <div class="saved" id="totalSaved"></div>
+  <div class="breakdown" id="breakdown"></div>
+</div>
+
+<script>
+  var discountList = document.getElementById('discountList');
+  var couponList = document.getElementById('couponList');
+
+  function makeRow(placeholder, suffix) {
+    var row = document.createElement('div');
+    row.className = 'discount-row';
+
+    var input = document.createElement('input');
+    input.type = 'number';
+    input.inputMode = 'decimal';
+    input.step = '0.01';
+    input.placeholder = placeholder;
+
+    var suffixSpan = document.createElement('span');
+    suffixSpan.textContent = suffix;
+    suffixSpan.style.color = '#888';
+    suffixSpan.style.fontSize = '14px';
+    suffixSpan.style.minWidth = '14px';
+
+    var removeBtn = document.createElement('button');
+    removeBtn.className = 'remove-btn';
+    removeBtn.textContent = '\u2212';
+    removeBtn.type = 'button';
+    removeBtn.addEventListener('click', function() {
+      row.parentNode.removeChild(row);
+    });
+
+    row.appendChild(input);
+    row.appendChild(suffixSpan);
+    row.appendChild(removeBtn);
+    return row;
+  }
+
+  function addDiscountRow() {
+    discountList.appendChild(makeRow('e.g. 25', '%'));
+  }
+
+  function addCouponRow() {
+    couponList.appendChild(makeRow('e.g. 3', '$'));
+  }
+
+  document.getElementById('addDiscountBtn').addEventListener('click', addDiscountRow);
+  document.getElementById('addCouponBtn').addEventListener('click', addCouponRow);
+
+  // Start with one discount row and one coupon row pre-added
+  addDiscountRow();
+  addCouponRow();
+
+  document.getElementById('calcBtn').addEventListener('click', function() {
+    var priceInput = document.getElementById('price');
+    var price = parseFloat(priceInput.value);
+
+    if (isNaN(price) || price <= 0) {
+      priceInput.style.borderColor = '#ff453a';
+      priceInput.focus();
+      return;
+    }
+    priceInput.style.borderColor = '#34343a';
+
+    var current = price;
+    var lines = [];
+    lines.push({ label: 'Original Price', value: '$' + price.toFixed(2) });
+
+    var discInputs = discountList.querySelectorAll('input');
+    for (var i = 0; i < discInputs.length; i++) {
+      var pct = parseFloat(discInputs[i].value);
+      if (!isNaN(pct) && pct > 0) {
+        var reduceBy = current * (pct / 100);
+        current = current - reduceBy;
+        lines.push({ label: 'After ' + pct + '% off', value: '$' + current.toFixed(2) });
+      }
+    }
+
+    var couponInputs = couponList.querySelectorAll('input');
+    for (var j = 0; j < couponInputs.length; j++) {
+      var amt = parseFloat(couponInputs[j].value);
+      if (!isNaN(amt) && amt > 0) {
+        current = current - amt;
+        if (current < 0) current = 0;
+        lines.push({ label: 'After $' + amt.toFixed(2) + ' coupon', value: '$' + current.toFixed(2) });
+      }
+    }
+
+    var saved = price - current;
+
+    document.getElementById('finalPrice').textContent = '$' + current.toFixed(2);
+    document.getElementById('totalSaved').textContent = 'You saved $' + saved.toFixed(2) + ' (' + ((saved / price) * 100).toFixed(1) + '%)';
+
+    var breakdownEl = document.getElementById('breakdown');
+    breakdownEl.innerHTML = '';
+    for (var k = 0; k < lines.length; k++) {
+      var d = document.createElement('div');
+      var labelSpan = document.createElement('span');
+      labelSpan.textContent = lines[k].label;
+      var valSpan = document.createElement('span');
+      valSpan.textContent = lines[k].value;
+      d.appendChild(labelSpan);
+      d.appendChild(valSpan);
+      breakdownEl.appendChild(d);
+    }
+
+    var resultEl = document.getElementById('result');
+    resultEl.classList.add('show');
+    resultEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+</script>
+
+</body>
+</html>
